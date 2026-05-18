@@ -710,7 +710,11 @@ class WordMatchGame {
         this.sound.ensureContext();
         if (window.speechSynthesis) {
             this.sound.initVoices();
-            try { window.speechSynthesis.cancel(); } catch(e){}
+            // iOS Safari 必须在用户手势里 speak 一次才能解锁后续 TTS
+            const empty = new SpeechSynthesisUtterance(' ');
+            empty.volume = 0.01;
+            empty.rate = 2;
+            try { window.speechSynthesis.speak(empty); } catch(e){}
         }
     }
 
