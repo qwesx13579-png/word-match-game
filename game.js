@@ -50,16 +50,21 @@ const TUTORIAL_STEPS = [
 ];
 
 class SoundManager {
-    constructor() { this.enabled = true; this.speakEnabled = true; this.ctx = null; this.preferredVoice = null; this.voiceReady = false; }
+    constructor() { this.enabled = true; this.speakEnabled = true; this.ctx = null; this.preferredVoice = null; this.voiceReady = false; this._resumeTimer = null; }
     initVoices() {
         if (this.voiceReady) return;
         const choose = () => {
             const voices = window.speechSynthesis.getVoices();
             if (!voices || voices.length === 0) return;
-            this.preferredVoice = voices.find(v => v.name.includes('Google US English'))
-                || voices.find(v => v.name.includes('Samantha'))
-                || voices.find(v => v.name.includes('Microsoft') && v.lang === 'en-US')
-                || voices.find(v => v.lang === 'en-US')
+            const enVoices = voices.filter(v => v.lang === 'en-US' || v.lang === 'en_US');
+            const pick = (fn) => enVoices.find(fn) || voices.find(fn);
+            this.preferredVoice = pick(v => v.name.includes('Neural') && v.name.includes('Google'))
+                || pick(v => v.name.includes('Google US English'))
+                || pick(v => v.name.includes('Samantha'))
+                || pick(v => v.name.includes('Natural') && v.name.includes('Microsoft'))
+                || pick(v => v.name.includes('Microsoft') && v.name.includes('Zira'))
+                || pick(v => v.name.includes('Microsoft') && v.name.includes('David'))
+                || pick(v => v.lang === 'en-US')
                 || voices[0];
             this.voiceReady = true;
         };
@@ -165,17 +170,38 @@ class SoundManager {
         if (!this.speakEnabled) return;
         if (!window.speechSynthesis) return;
         this.initVoices();
-        if (window.speechSynthesis.speaking) {
+        if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
             try { window.speechSynthesis.cancel(); } catch(e) {}
         }
         if (!text || !text.trim()) return;
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = 'en-US'; u.rate = 0.85; u.volume = 1;
-        if (this.preferredVoice) u.voice = this.preferredVoice;
-        u.onerror = (e) => { console.warn('TTS error:', e.error); };
-        try {
-            window.speechSynthesis.speak(u);
-        } catch(e) { console.warn('Speech synthesis failed:', e); }
+        if (this._resumeTimer) clearInterval(this._resumeTimer);
+
+        const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+/g) || [text];
+        let idx = 0;
+
+        const speakNext = () => {
+            if (idx >= sentences.length) {
+                if (this._resumeTimer) clearInterval(this._resumeTimer);
+                return;
+            }
+            const s = sentences[idx++].trim();
+            if (!s) { speakNext(); return; }
+            const u = new SpeechSynthesisUtterance(s);
+            u.lang = 'en-US';
+            u.rate = 0.9;
+            u.pitch = 1.05;
+            u.volume = 1;
+            if (this.preferredVoice) u.voice = this.preferredVoice;
+            u.onend = speakNext;
+            u.onerror = (e) => { console.warn('TTS error:', e.error); speakNext(); };
+            try { window.speechSynthesis.speak(u); } catch(e) { console.warn('Speech synthesis failed:', e); }
+        };
+
+        this._resumeTimer = setInterval(() => {
+            if (window.speechSynthesis.speaking) window.speechSynthesis.resume();
+        }, 10000);
+
+        speakNext();
     }
 }
 
