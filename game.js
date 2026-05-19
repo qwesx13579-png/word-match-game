@@ -80,21 +80,85 @@ class SoundManager {
         if (!this.enabled) return;
         this.ensureContext();
         const ctx = this.ctx, now = ctx.currentTime;
-        const tone = (freq, dur, type='sine', vol=0.12) => {
-            const o = ctx.createOscillator(), g = ctx.createGain();
-            o.connect(g); g.connect(ctx.destination);
-            o.type = type; o.frequency.setValueAtTime(freq, now);
-            g.gain.setValueAtTime(vol, now); g.gain.exponentialRampToValueAtTime(0.001, now+dur);
-            o.start(now); o.stop(now+dur);
+
+        const note = (freq, dur, wave='sine', vol=0.12, delay=0) => {
+            const t = now + delay;
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.connect(g);
+            g.connect(ctx.destination);
+            o.type = wave;
+            o.frequency.setValueAtTime(freq, t);
+
+            const attack = 0.015;
+            const decay = 0.08;
+            const sustain = vol * 0.5;
+            const release = Math.max(0.02, dur - attack - decay);
+
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(vol, t + attack);
+            g.gain.linearRampToValueAtTime(sustain, t + attack + decay);
+            g.gain.exponentialRampToValueAtTime(0.001, t + attack + decay + release);
+
+            o.start(t);
+            o.stop(t + dur);
         };
+
+        const slide = (freqFrom, freqTo, dur, wave='sine', vol=0.12, delay=0) => {
+            const t = now + delay;
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.connect(g);
+            g.connect(ctx.destination);
+            o.type = wave;
+            o.frequency.setValueAtTime(freqFrom, t);
+            o.frequency.exponentialRampToValueAtTime(freqTo, t + dur * 0.6);
+
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(vol, t + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+
+            o.start(t);
+            o.stop(t + dur);
+        };
+
+        const bell = (freq, dur, vol=0.12, delay=0) => {
+            note(freq, dur, 'sine', vol, delay);
+            note(freq * 2, dur * 0.8, 'sine', vol * 0.3, delay);
+            note(freq * 3, dur * 0.5, 'sine', vol * 0.15, delay + 0.01);
+        };
+
         switch(type) {
-            case 'swap': tone(600, 0.08); break;
-            case 'match': [523,659,784].forEach((f,i)=>tone(f,0.15,'sine',0.1)); break;
-            case 'collect': tone(880, 0.25, 'sine', 0.15); break;
-            case 'win': [[523,659,784],[587,740,880],[659,830,988]].forEach((ch,i)=>ch.forEach(f=>tone(f,0.4,'triangle',0.06))); break;
-            case 'lose': tone(200, 0.5, 'sawtooth', 0.08); break;
-            case 'invalid': tone(150, 0.1, 'square', 0.06); break;
-            case 'tick': tone(800, 0.05, 'sine', 0.05); break;
+            case 'swap':
+                slide(350, 520, 0.12, 'sine', 0.1);
+                break;
+            case 'match':
+                [523, 659, 784].forEach((f, i) => {
+                    note(f, 0.22, 'sine', 0.09, i * 0.06);
+                    note(f * 2, 0.18, 'sine', 0.03, i * 0.06 + 0.01);
+                });
+                break;
+            case 'collect':
+                bell(880, 0.4, 0.14);
+                break;
+            case 'win':
+                [[523, 659, 784], [587, 740, 880], [659, 830, 988], [784, 988, 1175]].forEach((ch, i) => {
+                    ch.forEach(f => note(f, 0.55, 'triangle', 0.05, i * 0.18));
+                    ch.forEach(f => note(f * 2, 0.4, 'sine', 0.02, i * 0.18 + 0.02));
+                });
+                break;
+            case 'lose':
+                note(250, 0.35, 'sine', 0.08);
+                note(220, 0.35, 'sine', 0.08, 0.15);
+                note(190, 0.4, 'sine', 0.08, 0.3);
+                break;
+            case 'invalid':
+                note(220, 0.1, 'sine', 0.06);
+                note(200, 0.1, 'sine', 0.06, 0.12);
+                break;
+            case 'tick':
+                note(1200, 0.04, 'sine', 0.04);
+                break;
         }
     }
     speak(text) {
