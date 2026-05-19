@@ -1161,6 +1161,22 @@ class WordMatchGame {
         }
         this.removeInitialMatches();
         if (!this.hasAnyValidMove() && attempts <= 100) this.generateBoard(attempts + 1);
+        this.assignLetterColors();
+    }
+
+    assignLetterColors() {
+        const freq = {};
+        for (let r = 0; r < this.boardSize; r++) {
+            for (let c = 0; c < this.boardSize; c++) {
+                const ch = this.board[r][c];
+                freq[ch] = (freq[ch] || 0) + 1;
+            }
+        }
+        const sorted = Object.keys(freq).sort((a, b) => freq[b] - freq[a]);
+        this.letterColorMap = {};
+        sorted.forEach((letter, i) => {
+            this.letterColorMap[letter] = i % 12;
+        });
     }
 
     removeInitialMatches() {
@@ -1236,7 +1252,8 @@ class WordMatchGame {
             for (let c = 0; c < this.boardSize; c++) {
                 const key = `${r},${c}`;
                 const letter = this.board[r][c];
-                const cls = 'tile-' + letter.toLowerCase();
+                const colorIdx = this.letterColorMap[letter] || 0;
+                const cls = 'tile-color-' + colorIdx;
                 let skinCls = '';
                 if (boardSkin === 'crystal_board') skinCls = ' tile-crystal';
                 else if (boardSkin === 'pixel_board') skinCls = ' tile-pixel';
@@ -1860,6 +1877,7 @@ class WordMatchGame {
             }
         }
         this.removeInitialMatches();
+        this.assignLetterColors();
     }
 
     updateUI() {
