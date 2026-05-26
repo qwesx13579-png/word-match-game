@@ -1,0 +1,19 @@
+{
+  "name": "单词拼拼消",
+  "short_name": "拼拼消",
+  "description": "把英语单词学习和消消乐结合起来的轻量小游戏。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#667eea",
+  "theme_color": "#667eea",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
