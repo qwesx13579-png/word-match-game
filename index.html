@@ -474,18 +474,39 @@ const THEMES = [
 ];
 
 const LETTER_COLOR_PALETTE = [
-    { bg:'#2563eb', bg2:'#60a5fa', fg:'#ffffff', border:'#1d4ed8' },
-    { bg:'#f97316', bg2:'#fdba74', fg:'#ffffff', border:'#c2410c' },
-    { bg:'#16a34a', bg2:'#86efac', fg:'#ffffff', border:'#15803d' },
-    { bg:'#7c3aed', bg2:'#c4b5fd', fg:'#ffffff', border:'#6d28d9' },
-    { bg:'#ca8a04', bg2:'#fde047', fg:'#ffffff', border:'#a16207' },
-    { bg:'#0891b2', bg2:'#67e8f9', fg:'#ffffff', border:'#0e7490' },
-    { bg:'#e11d48', bg2:'#fb7185', fg:'#ffffff', border:'#be123c' },
-    { bg:'#4f46e5', bg2:'#a5b4fc', fg:'#ffffff', border:'#4338ca' },
-    { bg:'#0f766e', bg2:'#5eead4', fg:'#ffffff', border:'#115e59' },
-    { bg:'#92400e', bg2:'#fbbf24', fg:'#ffffff', border:'#78350f' },
-    { bg:'#65a30d', bg2:'#bef264', fg:'#ffffff', border:'#4d7c0f' },
-    { bg:'#c026d3', bg2:'#f0abfc', fg:'#ffffff', border:'#a21caf' }
+    { bg:'#005ab5', bg2:'#3f8fd8', fg:'#ffffff', border:'#003f80' },
+    { bg:'#009e73', bg2:'#42c69e', fg:'#ffffff', border:'#006f51' },
+    { bg:'#d81b60', bg2:'#ec6793', fg:'#ffffff', border:'#a50f45' },
+    { bg:'#000000', bg2:'#4b5563', fg:'#ffffff', border:'#000000' },
+    { bg:'#ff7f00', bg2:'#ffb24d', fg:'#ffffff', border:'#b85c00' },
+    { bg:'#ffff33', bg2:'#fff98a', fg:'#3f3f00', border:'#b5ad00' },
+    { bg:'#0067b9', bg2:'#3b9ae1', fg:'#ffffff', border:'#004d8a' },
+    { bg:'#e87500', bg2:'#f7ad45', fg:'#ffffff', border:'#a94f00' },
+    { bg:'#008f5a', bg2:'#40c98c', fg:'#ffffff', border:'#006b43' },
+    { bg:'#c43c8c', bg2:'#e47db6', fg:'#ffffff', border:'#92286a' },
+    { bg:'#b73a18', bg2:'#e97955', fg:'#ffffff', border:'#842610' },
+    { bg:'#7055c7', bg2:'#a18ae9', fg:'#ffffff', border:'#503b99' },
+    { bg:'#9b6b00', bg2:'#d8a82f', fg:'#ffffff', border:'#704d00' },
+    { bg:'#00838f', bg2:'#42bdc4', fg:'#ffffff', border:'#005e66' },
+    { bg:'#5e7314', bg2:'#9bac50', fg:'#ffffff', border:'#43520e' },
+    { bg:'#7b4a2d', bg2:'#b57b55', fg:'#ffffff', border:'#58331e' },
+    { bg:'#343a70', bg2:'#6870b5', fg:'#ffffff', border:'#252a52' },
+    { bg:'#8f2c21', bg2:'#c9685d', fg:'#ffffff', border:'#661e17' },
+    { bg:'#334155', bg2:'#718096', fg:'#ffffff', border:'#1f2937' },
+    { bg:'#a54800', bg2:'#d97d37', fg:'#ffffff', border:'#753300' },
+    { bg:'#506b00', bg2:'#8cab36', fg:'#ffffff', border:'#384c00' },
+    { bg:'#156b78', bg2:'#58aab5', fg:'#ffffff', border:'#0e4c56' }
+];
+
+const CORE_LETTER_COLORS = LETTER_COLOR_PALETTE.slice(0, 6);
+
+const LETTER_PATTERNS = [
+    '',
+    'repeating-linear-gradient(135deg, rgba(255,255,255,.16) 0 4px, transparent 4px 12px)',
+    'repeating-linear-gradient(0deg, rgba(255,255,255,.14) 0 3px, transparent 3px 11px)',
+    'radial-gradient(circle at 22% 24%, rgba(255,255,255,.22) 0 3px, transparent 3px)',
+    'repeating-linear-gradient(90deg, rgba(255,255,255,.13) 0 3px, transparent 3px 12px)',
+    'repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 2px, transparent 2px 9px)'
 ];
 
 const ACHIEVEMENTS = [
@@ -791,15 +812,52 @@ class WordMatchGame {
         return picked;
     }
 
-    shufflePalette(seedText) {
-        const palette = [...LETTER_COLOR_PALETTE];
+    hexToLab(hex) {
+        const rgb = hex.match(/[a-f\d]{2}/gi).map(value => parseInt(value, 16) / 255);
+        const linear = rgb.map(value => value > 0.04045
+            ? Math.pow((value + 0.055) / 1.055, 2.4)
+            : value / 12.92);
+        const x = (linear[0] * 0.4124 + linear[1] * 0.3576 + linear[2] * 0.1805) / 0.95047;
+        const y = linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+        const z = (linear[0] * 0.0193 + linear[1] * 0.1192 + linear[2] * 0.9505) / 1.08883;
+        const pivot = value => value > 0.008856 ? Math.cbrt(value) : (7.787 * value) + (16 / 116);
+        const fx = pivot(x), fy = pivot(y), fz = pivot(z);
+        return { l:(116 * fy) - 16, a:500 * (fx - fy), b:200 * (fy - fz) };
+    }
+
+    colorDistance(left, right) {
+        const a = this.hexToLab(left), b = this.hexToLab(right);
+        return Math.sqrt(
+            Math.pow(a.l - b.l, 2) +
+            Math.pow(a.a - b.a, 2) +
+            Math.pow(a.b - b.b, 2)
+        );
+    }
+
+    selectDistinctPalette(count, seedText) {
         let seed = this.hashString(seedText || 'word-match');
-        for (let i = palette.length - 1; i > 0; i--) {
+        const core = [...CORE_LETTER_COLORS];
+        for (let i = core.length - 1; i > 0; i--) {
             seed = (seed * 1664525 + 1013904223) >>> 0;
             const j = seed % (i + 1);
-            [palette[i], palette[j]] = [palette[j], palette[i]];
+            [core[i], core[j]] = [core[j], core[i]];
         }
-        return palette;
+        const selected = core.slice(0, Math.min(count, core.length));
+        const coreHex = new Set(CORE_LETTER_COLORS.map(color => color.bg));
+        const remaining = LETTER_COLOR_PALETTE.filter(color => !coreHex.has(color.bg));
+        while (selected.length < count && remaining.length > 0) {
+            let bestIndex = 0;
+            let bestScore = -1;
+            remaining.forEach((candidate, index) => {
+                const minDistance = Math.min(...selected.map(color => this.colorDistance(candidate.bg, color.bg)));
+                if (minDistance > bestScore) {
+                    bestIndex = index;
+                    bestScore = minDistance;
+                }
+            });
+            selected.push(remaining.splice(bestIndex, 1)[0]);
+        }
+        return selected;
     }
 
     buildLetterColorMap() {
@@ -809,16 +867,18 @@ class WordMatchGame {
             ...letters.filter(ch => targetSet.has(ch)),
             ...letters.filter(ch => !targetSet.has(ch))
         ];
-        const palette = this.shufflePalette(`${this.gameMode}-${this.level}-${this.targetWord}-${ordered.join('')}`);
+        const palette = this.selectDistinctPalette(ordered.length, `${this.gameMode}-${this.level}-${this.targetWord}`);
         this.letterColorMap = {};
         ordered.forEach((letter, index) => {
-            this.letterColorMap[letter] = palette[index % palette.length];
+            this.letterColorMap[letter] = { ...palette[index], pattern:LETTER_PATTERNS[index % LETTER_PATTERNS.length] };
         });
     }
 
     applyTileColor(tile, letter) {
         const color = this.letterColorMap[letter] || LETTER_COLOR_PALETTE[0];
-        tile.style.setProperty('background', `linear-gradient(135deg, ${color.bg} 0%, ${color.bg2} 100%)`, 'important');
+        const gradient = `linear-gradient(135deg, ${color.bg} 0%, ${color.bg2} 100%)`;
+        const background = color.pattern ? `${color.pattern}, ${gradient}` : gradient;
+        tile.style.setProperty('background', background, 'important');
         tile.style.color = color.fg;
         tile.style.border = `2px solid ${color.border}`;
         tile.style.textShadow = '0 1px 2px rgba(0,0,0,0.28)';
