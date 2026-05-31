@@ -299,6 +299,7 @@
         .companion-card-preview { height: 82px; display: flex; justify-content: center; align-items: center; border-radius: 8px; background: linear-gradient(135deg,#eef2ff,#fff); margin-bottom: 6px; }
         .companion-card-preview .companion-avatar { width: 76px; height: 76px; }
         .companion-item-badge { font-size: 10px; color: #666; min-height: 28px; line-height: 1.35; }
+        .companion-help { grid-column: 1 / -1; padding: 8px 10px; border-radius: 8px; background: #eef2ff; color: #555; font-size: 10px; line-height: 1.5; text-align: left; }
         .frame-bronze { border: 3px solid #cd7f32; box-shadow: 0 0 8px rgba(205,127,50,0.4); }
         .frame-silver { border: 3px solid #c0c0c0; box-shadow: 0 0 12px rgba(192,192,192,0.5); }
         .frame-gold { border: 3px solid #ffd700; box-shadow: 0 0 16px rgba(255,215,0,0.6); }
@@ -1204,6 +1205,9 @@ class WordMatchGame {
     }
 
     renderCompanionShop(grid) {
+        grid.innerHTML = `<div class="companion-help">
+            <strong>伙伴养成：</strong>小恐龙默认加入队伍；机甲和公主可使用积分解锁。每购买 1 个伙伴专属道具，角色羁绊增加 1 点。羁绊达到 3 点和 8 点时，角色会进化并获得新的外观。
+        </div>`;
         COMPANIONS.forEach(companion => {
             const owned = this.unlockedCompanions.includes(companion.id);
             const equipped = this.equippedCompanion === companion.id;
@@ -1314,6 +1318,7 @@ class WordMatchGame {
                 <div class="companion-name">${companion.name}</div>
                 <div class="companion-effect">${companion.effect}${shield}</div>
                 <div class="companion-level">${growth.label} · 羁绊 ${growth.points}/${growth.next}</div>
+                <div class="companion-effect">购买专属道具可提升羁绊</div>
                 <div class="companion-growth"><div class="companion-growth-fill" style="width:${growth.percent}%"></div></div>
             </div>
             <button class="companion-use" onclick="game.useCompanionItem()" ${count <= 0 ? 'disabled' : ''}>${companion.itemName} ×${count}</button>
@@ -2256,18 +2261,23 @@ class WordMatchGame {
     getMasteryInfo(word) {
         const data = this.wordMastery[word] || { correct: 0, fail: 0, review: 0 };
         const score = Math.max(0, (data.correct || 0) * 2 + (data.review || 0) * 2 - (data.fail || 0));
+        const percent = Math.max(0, Math.min(100,
+            (data.correct || 0) * 18 +
+            (data.review || 0) * 22 -
+            (data.fail || 0) * 8
+        ));
         const levels = [
-            { name: '初见', icon: '🌱', min: 0, percent: 12 },
-            { name: '认识', icon: '🌿', min: 2, percent: 32 },
-            { name: '熟悉', icon: '🌼', min: 5, percent: 56 },
-            { name: '掌握', icon: '🌟', min: 9, percent: 78 },
-            { name: '已巩固', icon: '🏆', min: 14, percent: 100 }
+            { name: '初见', icon: '🌱', min: 0 },
+            { name: '认识', icon: '🌿', min: 2 },
+            { name: '熟悉', icon: '🌼', min: 5 },
+            { name: '掌握', icon: '🌟', min: 9 },
+            { name: '已巩固', icon: '🏆', min: 14 }
         ];
         let level = levels[0];
         for (const item of levels) {
             if (score >= item.min) level = item;
         }
-        return { ...data, score, ...level };
+        return { ...data, score, ...level, percent };
     }
 
     updateMastery(word, type) {
@@ -2694,7 +2704,7 @@ class WordMatchGame {
         document.getElementById('detailSentence').textContent = this.targetSentence;
         document.getElementById('detailCn').textContent = this.targetSentenceCn || this.targetChinese;
         const mastery = this.getMasteryInfo(this.targetWord);
-        document.getElementById('detailMastery').textContent = `掌握度：${mastery.icon} ${mastery.name}`;
+        document.getElementById('detailMastery').textContent = `掌握度：${mastery.icon} ${mastery.name} · ${mastery.percent}%`;
         document.getElementById('detailMasteryFill').style.width = mastery.percent + '%';
         const isFav = this.favorites.some(w => w.en === this.targetWord);
         document.getElementById('favBtn').textContent = isFav ? '❤️ 已收藏' : '⭐ 收藏';
