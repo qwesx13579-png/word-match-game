@@ -244,7 +244,7 @@
         .level-node.current { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; animation: currentPulse 1.5s ease infinite; box-shadow: 0 0 0 3px rgba(102,126,234,0.3); }
         .level-node.locked { background: #e9ecef; color: #adb5bd; }
         @keyframes currentPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
-        .shop-tabs { display: flex; gap: 6px; justify-content: center; margin-bottom: 12px; }
+        .shop-tabs { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
         .shop-tab { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; background: #f8f9fa; color: #666; border: 2px solid transparent; transition: all 0.2s; }
         .shop-tab.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
         .shop-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-height: 320px; overflow-y: auto; padding: 4px; }
@@ -275,6 +275,16 @@
         .setting-toggle { display: flex; align-items: center; gap: 5px; background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 999px; padding: 5px 9px; color: #666; font-size: 11px; font-weight: 700; cursor: pointer; }
         .setting-toggle input { accent-color: #667eea; }
         body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+        .companion-dock { display: flex; align-items: center; gap: 8px; margin: -2px 0 8px; padding: 6px 8px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 3px 8px rgba(0,0,0,.06); }
+        .companion-sprite { width: 52px; height: 52px; object-fit: contain; image-rendering: pixelated; flex: 0 0 auto; }
+        .companion-copy { flex: 1; min-width: 0; text-align: left; }
+        .companion-name { font-size: 12px; font-weight: 800; color: #333; }
+        .companion-effect { margin-top: 2px; font-size: 10px; color: #777; line-height: 1.35; }
+        .companion-use { border: none; border-radius: 8px; padding: 6px 8px; background: linear-gradient(135deg,#667eea,#764ba2); color: #fff; font-size: 11px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+        .companion-use:disabled { background: #e5e7eb; color: #a3a8b0; cursor: not-allowed; }
+        .companion-card-preview { height: 82px; display: flex; justify-content: center; align-items: center; border-radius: 8px; background: linear-gradient(135deg,#eef2ff,#fff); margin-bottom: 6px; }
+        .companion-card-preview img { width: 76px; height: 76px; object-fit: contain; image-rendering: pixelated; }
+        .companion-item-badge { font-size: 10px; color: #666; min-height: 28px; line-height: 1.35; }
         .frame-bronze { border: 3px solid #cd7f32; box-shadow: 0 0 8px rgba(205,127,50,0.4); }
         .frame-silver { border: 3px solid #c0c0c0; box-shadow: 0 0 12px rgba(192,192,192,0.5); }
         .frame-gold { border: 3px solid #ffd700; box-shadow: 0 0 16px rgba(255,215,0,0.6); }
@@ -293,6 +303,10 @@
             body.in-game .info-label { font-size: 9px; }
             body.in-game .info-value { font-size: 17px; }
             body.in-game .target-word-section { padding: 9px 10px; margin-bottom: 7px; }
+            body.in-game .companion-dock { gap: 6px; padding: 4px 6px; margin-bottom: 6px; }
+            body.in-game .companion-sprite { width: 42px; height: 42px; }
+            body.in-game .companion-effect { font-size: 9px; }
+            body.in-game .companion-use { max-width: 94px; padding: 5px 6px; font-size: 10px; white-space: normal; }
             .letter-slot { width: 34px; height: 34px; font-size: 16px; }
             .tile { font-size: 16px; }
             .btn { padding: 6px 10px; font-size: 12px; }
@@ -390,6 +404,7 @@
                 <div class="progress-meta mastery"><span>单词掌握度</span><span id="targetMasteryText">0%</span></div>
                 <div class="mastery-bar" title="当前单词掌握度"><div class="mastery-fill" id="targetMasteryFill" style="width:0%"></div></div>
             </div>
+            <div class="companion-dock" id="companionDock"></div>
 
             <div class="board-container" id="boardContainer">
                 <div class="game-board" id="gameBoard"></div>
@@ -503,6 +518,7 @@
                 <div class="shop-tab" data-shop-tab="board">棋盘</div>
                 <div class="shop-tab" data-shop-tab="effect">特效</div>
                 <div class="shop-tab" data-shop-tab="frame">边框</div>
+                <div class="shop-tab" data-shop-tab="companion">伙伴</div>
                 <div class="shop-tab" data-shop-tab="tool">道具</div>
             </div>
             <div class="shop-grid" id="shopGrid"></div>
@@ -593,6 +609,18 @@ const SHOP_ITEMS = [
     { id:'sentence_card', name:'例句拆解卡', type:'tool', price:900, preview:'#bbf7d0', desc:'显示例句中文翻译并自动朗读' },
     { id:'retry_card', name:'错词复活卡', type:'tool', price:1600, preview:'#fecaca', desc:'失败后保留当前单词进度重试' },
     { id:'review_boost', name:'复习加倍卡', type:'tool', price:2200, preview:'#ddd6fe', desc:'下一次复习完成奖励翻倍' }
+];
+
+const COMPANIONS = [
+    { id:'dino', name:'背包小恐龙', price:0, image:'assets/companions/dino.png', item:'dino_snack', itemName:'能量果干', effect:'使用后立即增加 5 步' },
+    { id:'mecha', name:'苍蓝机甲', price:5200, image:'assets/companions/mecha.png', item:'mecha_cell', itemName:'护盾电池', effect:'接下来 3 次有效交换不消耗步数' },
+    { id:'princess', name:'星愿公主', price:5200, image:'assets/companions/princess.png', item:'princess_wand', itemName:'星光糖果', effect:'立即补齐 1 个尚未收集的目标字母' }
+];
+
+const COMPANION_ITEMS = [
+    { id:'dino_snack', companion:'dino', name:'能量果干', price:900, icon:'🍎' },
+    { id:'mecha_cell', companion:'mecha', name:'护盾电池', price:1200, icon:'🔋' },
+    { id:'princess_wand', companion:'princess', name:'星光糖果', price:1100, icon:'⭐' }
 ];
 
 const TUTORIAL_STEPS = [
@@ -701,6 +729,10 @@ class WordMatchGame {
         this.reviewBoostActive = false;
         this.reduceMotion = false;
         this.colorBlindMode = false;
+        this.unlockedCompanions = ['dino'];
+        this.equippedCompanion = 'dino';
+        this.companionInventory = {};
+        this.mechaShieldMoves = 0;
         this.deferredInstallPrompt = null;
         this.letterColorMap = {};
 
@@ -766,6 +798,10 @@ class WordMatchGame {
                 this.reviewBoostActive = !!data.reviewBoostActive;
                 this.reduceMotion = !!data.reduceMotion;
                 this.colorBlindMode = !!data.colorBlindMode;
+                this.unlockedCompanions = data.unlockedCompanions || ['dino'];
+                this.equippedCompanion = data.equippedCompanion || 'dino';
+                this.companionInventory = data.companionInventory || {};
+                this.mechaShieldMoves = data.mechaShieldMoves || 0;
                 if (data.speakEnabled !== undefined) this.sound.speakEnabled = data.speakEnabled;
                 if (version < 2) {
                     this.nextBombAt = Math.max(this.nextBombAt, 8000);
@@ -800,6 +836,10 @@ class WordMatchGame {
             reviewBoostActive: this.reviewBoostActive,
             reduceMotion: this.reduceMotion,
             colorBlindMode: this.colorBlindMode,
+            unlockedCompanions: this.unlockedCompanions,
+            equippedCompanion: this.equippedCompanion,
+            companionInventory: this.companionInventory,
+            mechaShieldMoves: this.mechaShieldMoves,
             speakEnabled: this.sound.speakEnabled,
             date: Date.now()
         };
@@ -983,6 +1023,7 @@ class WordMatchGame {
         this.renderLevelMap();
         this.updateEquipBar();
         this.updateToolUI();
+        this.renderCompanionDock();
         this.applyEquippedTheme();
         this.applyAccessibilitySettings();
         this.setupPWA();
@@ -1110,6 +1151,10 @@ class WordMatchGame {
         if (!grid) return;
         grid.innerHTML = '';
         scoreEl.textContent = `当前积分: ${this.score}`;
+        if (type === 'companion') {
+            this.renderCompanionShop(grid);
+            return;
+        }
         const items = SHOP_ITEMS.filter(i => i.type === type);
         items.forEach(item => {
             const isTool = type === 'tool';
@@ -1139,6 +1184,112 @@ class WordMatchGame {
             `;
             grid.appendChild(card);
         });
+    }
+
+    renderCompanionShop(grid) {
+        COMPANIONS.forEach(companion => {
+            const owned = this.unlockedCompanions.includes(companion.id);
+            const equipped = this.equippedCompanion === companion.id;
+            const item = COMPANION_ITEMS.find(entry => entry.companion === companion.id);
+            const count = this.companionInventory[item.id] || 0;
+            const card = document.createElement('div');
+            card.className = `shop-card ${owned ? 'owned' : ''} ${equipped ? 'equipped' : ''}`;
+            let actions = '';
+            if (!owned) {
+                actions = `<button class="shop-btn buy" onclick="game.buyCompanion('${companion.id}')" ${this.score >= companion.price ? '' : 'disabled'}>${companion.price}分解锁</button>`;
+            } else {
+                actions = equipped
+                    ? '<button class="shop-btn owned" disabled>已出战</button>'
+                    : `<button class="shop-btn equip" onclick="game.equipCompanion('${companion.id}')">设为伙伴</button>`;
+                actions += `<button class="shop-btn buy" onclick="game.buyCompanionItem('${item.id}')" ${this.score >= item.price ? '' : 'disabled'}>${item.icon} ${item.price}分 · 已有${count}</button>`;
+            }
+            card.innerHTML = `
+                ${equipped ? '<div class="equipped-badge">出战中</div>' : ''}
+                <div class="companion-card-preview"><img src="${companion.image}" alt="${companion.name}"></div>
+                <div class="shop-name">${companion.name}</div>
+                <div class="companion-item-badge">${companion.effect}</div>
+                ${actions}
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    buyCompanion(id) {
+        const companion = COMPANIONS.find(item => item.id === id);
+        if (!companion || this.unlockedCompanions.includes(id)) return;
+        if (this.score < companion.price) return this.showToast('积分不足!');
+        this.score -= companion.price;
+        this.unlockedCompanions.push(id);
+        this.equipCompanion(id);
+        this.showToast(`🎮 新伙伴加入：${companion.name}`);
+        this.saveGlobal();
+        this.renderShop('companion');
+    }
+
+    equipCompanion(id) {
+        if (!this.unlockedCompanions.includes(id)) return;
+        this.equippedCompanion = id;
+        this.renderCompanionDock();
+        this.saveGlobal();
+        this.renderShop('companion');
+    }
+
+    buyCompanionItem(id) {
+        const item = COMPANION_ITEMS.find(entry => entry.id === id);
+        if (!item || !this.unlockedCompanions.includes(item.companion)) return;
+        if (this.score < item.price) return this.showToast('积分不足!');
+        this.score -= item.price;
+        this.companionInventory[id] = (this.companionInventory[id] || 0) + 1;
+        this.showToast(`🎒 获得 ${item.name}`);
+        this.renderCompanionDock();
+        this.saveGlobal();
+        this.renderShop('companion');
+        this.updateUI();
+    }
+
+    useCompanionItem() {
+        const companion = COMPANIONS.find(item => item.id === this.equippedCompanion) || COMPANIONS[0];
+        const count = this.companionInventory[companion.item] || 0;
+        if (count <= 0) {
+            this.showToast(`去伙伴商店购买「${companion.itemName}」`);
+            return;
+        }
+        if (companion.id === 'dino') {
+            if (this.gameMode === 'endless') return this.showToast('无尽模式不需要补充步数');
+            this.moves += 5;
+        } else if (companion.id === 'mecha') {
+            this.mechaShieldMoves += 3;
+        } else {
+            const missing = this.targetWord.split('').find(letter => {
+                const needed = this.targetWord.split(letter).length - 1;
+                return (this.collectedLetters[letter] || 0) < needed;
+            });
+            if (!missing) return this.showToast('当前单词已经收集完成');
+            this.collectedLetters[missing] = (this.collectedLetters[missing] || 0) + 1;
+            this.renderTarget();
+            this.checkWin();
+        }
+        this.companionInventory[companion.item]--;
+        this.showToast(`✨ ${companion.itemName} 已生效`);
+        this.renderCompanionDock();
+        this.updateUI();
+        this.saveGlobal();
+    }
+
+    renderCompanionDock() {
+        const dock = document.getElementById('companionDock');
+        if (!dock) return;
+        const companion = COMPANIONS.find(item => item.id === this.equippedCompanion) || COMPANIONS[0];
+        const count = this.companionInventory[companion.item] || 0;
+        const shield = this.mechaShieldMoves > 0 ? ` · 护盾剩余 ${this.mechaShieldMoves} 步` : '';
+        dock.innerHTML = `
+            <img class="companion-sprite" src="${companion.image}" alt="${companion.name}">
+            <div class="companion-copy">
+                <div class="companion-name">${companion.name}</div>
+                <div class="companion-effect">${companion.effect}${shield}</div>
+            </div>
+            <button class="companion-use" onclick="game.useCompanionItem()" ${count <= 0 ? 'disabled' : ''}>${companion.itemName} ×${count}</button>
+        `;
     }
 
     getShopPreviewHTML(item) {
@@ -1212,11 +1363,13 @@ class WordMatchGame {
         const b = SHOP_ITEMS.find(i => i.id === this.equippedBoard);
         const e = SHOP_ITEMS.find(i => i.id === this.equippedEffect);
         const f = SHOP_ITEMS.find(i => i.id === this.equippedFrame);
+        const c = COMPANIONS.find(i => i.id === this.equippedCompanion);
         bar.innerHTML = `
             <span class="equip-tag">🎨 ${t ? t.name : '默认'}</span>
             <span class="equip-tag">🔲 ${b ? b.name : '默认'}</span>
             <span class="equip-tag">✨ ${e ? e.name : '默认'}</span>
             <span class="equip-tag">🏅 ${f ? f.name : '无'}</span>
+            <span class="equip-tag">🎮 ${c ? c.name : '伙伴'}</span>
         `;
     }
 
@@ -1728,7 +1881,14 @@ class WordMatchGame {
         this.renderBoard();
         const matches = this.findMatches();
         if (matches.length > 0) {
-            if (this.gameMode !== 'endless') this.moves--;
+            if (this.gameMode !== 'endless') {
+                if (this.mechaShieldMoves > 0) {
+                    this.mechaShieldMoves--;
+                    this.showToast(`🛡️ 机甲护盾生效，剩余 ${this.mechaShieldMoves} 步`);
+                } else {
+                    this.moves--;
+                }
+            }
             this.sound.play('swap');
             await this.processMatches(matches);
             this.checkWin();
@@ -2289,6 +2449,7 @@ class WordMatchGame {
         if (this.gameMode === 'endless') document.getElementById('moves').textContent = this.endlessWords;
         this.updateBombUI();
         this.updateToolUI();
+        this.renderCompanionDock();
     }
 
     updateBombUI() {

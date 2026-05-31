@@ -1,10 +1,13 @@
-const CACHE_NAME = 'word-match-game-v7';
+const CACHE_NAME = 'word-match-game-v8';
 const ASSETS = [
   './',
   './index.html',
   './word-match-game.html',
   './manifest.json',
-  './icon.svg'
+  './icon.svg',
+  './assets/companions/dino.png',
+  './assets/companions/mecha.png',
+  './assets/companions/princess.png'
 ];
 
 self.addEventListener('install', event => {
