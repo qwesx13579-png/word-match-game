@@ -67,9 +67,24 @@
             border: 2px solid #11998e; color: white;
             transform: scale(1.08); box-shadow: 0 4px 12px rgba(17,153,142,0.4);
         }
+        .letter-slot.arriving { animation: slotArrive 0.45s ease; }
+        .letter-fly {
+            position: fixed; z-index: 200; pointer-events: none;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 8px; font-size: 18px; font-weight: 800;
+            animation: flyToSlot 0.55s cubic-bezier(.2,.75,.25,1) forwards;
+        }
+        @keyframes flyToSlot {
+            0% { transform: translate(0,0) scale(1); opacity: 1; }
+            75% { opacity: 1; }
+            100% { transform: translate(var(--fly-x),var(--fly-y)) scale(.62); opacity: 0; }
+        }
+        @keyframes slotArrive { 0%,100%{transform:scale(1.08)} 50%{transform:scale(1.24)} }
         .letter-slot .star { position: absolute; top: -8px; right: -8px; font-size: 14px; cursor: pointer; }
         .progress-bar { width: 100%; height: 6px; background: #e9ecef; border-radius: 3px; overflow: hidden; margin-top: 6px; }
         .progress-fill { height: 100%; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); transition: width 0.3s ease; }
+        .progress-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 7px; color: #856404; font-size: 10px; line-height: 1; }
+        .progress-meta.mastery { color: #6b5ca5; margin-top: 8px; }
         .board-container { display: flex; justify-content: center; margin-bottom: 10px; position: relative; }
         .game-board {
             display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px;
@@ -129,10 +144,12 @@
         .btn-secondary:hover { background: #e9ecef; }
         .btn-hint { background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%); color: #333; }
         .btn-hint:disabled { background: #ccc; color: #888; cursor: not-allowed; }
-        .btn-sound { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; }
-        .btn-sound.off { background: #ddd; color: #999; }
+        .btn-control-soft { background: #f6f7fb; color: #5d6470; border: 1px solid #e1e5ec; }
+        .btn-control-soft:hover { background: #eceff5; transform: translateY(-1px); }
+        .btn-sound.off { background: #eceef2; color: #9aa0aa; }
         .btn-bomb { background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); color: white; }
-        .btn-bomb:disabled { background: #ccc; color: #888; cursor: not-allowed; }
+        .btn-bomb:disabled { background: #eceef2; color: #a6abb3; cursor: not-allowed; border: 1px solid #e0e3e8; }
+        .btn-menu { background: transparent; border-color: #e6e8ed; color: #7c838d; }
         .hint-text { text-align: center; color: #888; font-size: 11px; margin-top: 6px; }
         .tile.bomb-target { animation: bombPulse 0.6s ease infinite; box-shadow: 0 0 0 3px #ff6b6b, 0 0 12px #ff6b6b; z-index: 5; }
         @keyframes bombPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
@@ -338,7 +355,9 @@
                 </div>
                 <div class="target-word" id="targetWord"></div>
                 <div id="chineseMeaning" style="margin-top:6px; font-size:15px; color:#856404; font-weight:600; min-height:22px;"></div>
+                <div class="progress-meta"><span>本词拼写</span><span id="wordProgressText">0%</span></div>
                 <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+                <div class="progress-meta mastery"><span>单词掌握度</span><span id="targetMasteryText">0%</span></div>
                 <div class="mastery-bar" title="当前单词掌握度"><div class="mastery-fill" id="targetMasteryFill" style="width:0%"></div></div>
             </div>
 
@@ -354,11 +373,11 @@
 
             <div class="controls">
                 <button class="btn btn-hint" id="hintBtn">💡 提示</button>
-                <button class="btn btn-sound" id="soundBtn">🔊 音效</button>
-                <button class="btn btn-sound" id="ttsBtn">🗣️ 朗读</button>
-                <button class="btn btn-primary" data-action="shuffle">🔄 刷新</button>
+                <button class="btn btn-control-soft btn-sound" id="soundBtn">🔊 音效</button>
+                <button class="btn btn-control-soft btn-sound" id="ttsBtn">🗣️ 朗读</button>
+                <button class="btn btn-control-soft" data-action="shuffle">🔄 刷新</button>
                 <button class="btn btn-bomb" id="bombBtn">💣 <span id="bombCount">0</span></button>
-                <button class="btn btn-secondary" data-action="menu">🏠 返回</button>
+                <button class="btn btn-secondary btn-menu" data-action="menu">🏠 返回</button>
             </div>
             <div class="hint-text" id="gameHint">点击两个相邻字母交换，连成3个相同字母即可消除并收集</div>
         </div>
@@ -870,7 +889,16 @@ class WordMatchGame {
         const palette = this.selectDistinctPalette(ordered.length, `${this.gameMode}-${this.level}-${this.targetWord}`);
         this.letterColorMap = {};
         ordered.forEach((letter, index) => {
-            this.letterColorMap[letter] = { ...palette[index], pattern:LETTER_PATTERNS[index % LETTER_PATTERNS.length] };
+            const color = palette[index];
+            const previousColors = palette.slice(0, index);
+            const nearestDistance = previousColors.length
+                ? Math.min(...previousColors.map(previous => this.colorDistance(color.bg, previous.bg)))
+                : Infinity;
+            const needsPattern = nearestDistance < 52;
+            const pattern = needsPattern
+                ? LETTER_PATTERNS[(index % (LETTER_PATTERNS.length - 1)) + 1]
+                : '';
+            this.letterColorMap[letter] = { ...color, pattern };
         });
     }
 
@@ -1538,15 +1566,21 @@ class WordMatchGame {
             const have = (this.collectedLetters[ch] || 0) >= got[ch];
             slot.className = `letter-slot ${have ? 'collected' : 'pending'}`;
             slot.textContent = have ? ch : '?';
+            slot.dataset.letter = ch;
+            slot.dataset.occurrence = got[ch] - 1;
             el.appendChild(slot);
         }
         let total = 0, have = 0;
         for (let ch in needed) { total += needed[ch]; have += Math.min(this.collectedLetters[ch] || 0, needed[ch]); }
-        document.getElementById('progressFill').style.width = (have / total * 100) + '%';
+        const progress = Math.round(have / total * 100);
+        document.getElementById('progressFill').style.width = progress + '%';
+        document.getElementById('wordProgressText').textContent = progress + '%';
         document.getElementById('chineseMeaning').textContent = this.targetChinese;
         const mastery = this.getMasteryInfo(this.targetWord);
         const masteryFill = document.getElementById('targetMasteryFill');
         if (masteryFill) masteryFill.style.width = mastery.percent + '%';
+        const masteryText = document.getElementById('targetMasteryText');
+        if (masteryText) masteryText.textContent = mastery.percent + '%';
         const totalWords = this.targetWords ? this.targetWords.length : 1;
         const current = this.currentWordIndex !== undefined ? this.currentWordIndex + 1 : 1;
         document.getElementById('targetLabel').textContent = `目标单词 (${current}/${totalWords})`;
@@ -1728,6 +1762,34 @@ class WordMatchGame {
         setTimeout(() => el.remove(), 1000);
     }
 
+    flyLetterToTarget(r, c, letter, occurrence) {
+        const tile = document.querySelector(`[data-r="${r}"][data-c="${c}"]`);
+        const slot = document.querySelector(`.letter-slot[data-letter="${letter}"][data-occurrence="${occurrence}"]`);
+        if (!tile || !slot) return;
+        const tileRect = tile.getBoundingClientRect();
+        const slotRect = slot.getBoundingClientRect();
+        const flyer = document.createElement('div');
+        flyer.className = 'letter-fly';
+        flyer.textContent = letter;
+        flyer.style.left = tileRect.left + 'px';
+        flyer.style.top = tileRect.top + 'px';
+        flyer.style.width = tileRect.width + 'px';
+        flyer.style.height = tileRect.height + 'px';
+        flyer.style.background = getComputedStyle(tile).background;
+        flyer.style.color = getComputedStyle(tile).color;
+        flyer.style.border = getComputedStyle(tile).border;
+        flyer.style.setProperty('--fly-x', (slotRect.left + slotRect.width / 2 - tileRect.left - tileRect.width / 2) + 'px');
+        flyer.style.setProperty('--fly-y', (slotRect.top + slotRect.height / 2 - tileRect.top - tileRect.height / 2) + 'px');
+        document.body.appendChild(flyer);
+        setTimeout(() => {
+            flyer.remove();
+            const arrivedSlot = document.querySelector(`.letter-slot[data-letter="${letter}"][data-occurrence="${occurrence}"]`);
+            if (!arrivedSlot) return;
+            arrivedSlot.classList.add('arriving');
+            setTimeout(() => arrivedSlot.classList.remove('arriving'), 450);
+        }, 550);
+    }
+
     async processMatches(matches) {
         let combo = 0;
         while (matches.length > 0) {
@@ -1738,6 +1800,7 @@ class WordMatchGame {
                     const need = this.targetWord.split(m.letter).length - 1;
                     if (this.collectedLetters[m.letter] < need) {
                         this.collectedLetters[m.letter]++;
+                        this.flyLetterToTarget(m.r, m.c, m.letter, this.collectedLetters[m.letter] - 1);
                         collectedAny = true;
                     }
                 }
