@@ -276,14 +276,28 @@
         .setting-toggle input { accent-color: #667eea; }
         body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
         .companion-dock { display: flex; align-items: center; gap: 8px; margin: -2px 0 8px; padding: 6px 8px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 3px 8px rgba(0,0,0,.06); }
-        .companion-sprite { width: 52px; height: 52px; object-fit: contain; image-rendering: pixelated; flex: 0 0 auto; }
+        .companion-avatar { position: relative; width: 52px; height: 52px; flex: 0 0 auto; }
+        .companion-sprite { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; position: relative; z-index: 2; }
+        .companion-avatar::before, .companion-avatar::after { content: ""; position: absolute; pointer-events: none; z-index: 3; }
+        .companion-avatar.level-2 { filter: drop-shadow(0 0 4px rgba(255,193,7,.65)); }
+        .companion-avatar.level-3 { filter: drop-shadow(0 0 7px rgba(102,126,234,.8)); }
+        .companion-avatar.dino.level-2::before { width: 15px; height: 9px; left: 4px; top: 4px; background: #ffca28; border: 2px solid #8d5a00; border-radius: 50% 50% 20% 20%; box-shadow: 7px -3px 0 -2px #ff7043; transform: rotate(-14deg); }
+        .companion-avatar.dino.level-3::after { width: 12px; height: 16px; right: -1px; top: 17px; border: 3px solid #29b6f6; border-left-width: 5px; border-radius: 45%; box-shadow: 0 0 7px #29b6f6; }
+        .companion-avatar.mecha.level-2::before { width: 42px; height: 7px; left: 5px; top: 11px; background: linear-gradient(90deg,#00e5ff,transparent,#00e5ff); border-radius: 50%; box-shadow: 0 0 6px #00e5ff; }
+        .companion-avatar.mecha.level-3::after { width: 54px; height: 30px; left: -1px; top: 12px; background: linear-gradient(115deg,transparent 35%,rgba(0,229,255,.75) 36% 42%,transparent 43%), linear-gradient(245deg,transparent 35%,rgba(0,229,255,.75) 36% 42%,transparent 43%); opacity: .8; }
+        .companion-avatar.princess.level-2::before { width: 18px; height: 11px; left: 17px; top: -2px; background: linear-gradient(135deg,#ffd54f,#ff8f00); clip-path: polygon(0 100%,0 48%,22% 68%,40% 0,58% 68%,80% 20%,100% 48%,100% 100%); filter: drop-shadow(0 0 3px #ffd54f); }
+        .companion-avatar.princess.level-3::after { width: 58px; height: 58px; left: -3px; top: -3px; border: 2px dashed rgba(255,105,180,.82); border-radius: 50%; box-shadow: 0 0 8px rgba(255,105,180,.72); animation: companionAura 4s linear infinite; }
+        @keyframes companionAura { to { transform: rotate(360deg); } }
         .companion-copy { flex: 1; min-width: 0; text-align: left; }
         .companion-name { font-size: 12px; font-weight: 800; color: #333; }
         .companion-effect { margin-top: 2px; font-size: 10px; color: #777; line-height: 1.35; }
+        .companion-growth { margin-top: 4px; height: 4px; overflow: hidden; border-radius: 999px; background: #edf2f7; }
+        .companion-growth-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg,#38ef7d,#667eea); }
+        .companion-level { margin-top: 2px; color: #667eea; font-size: 9px; font-weight: 800; }
         .companion-use { border: none; border-radius: 8px; padding: 6px 8px; background: linear-gradient(135deg,#667eea,#764ba2); color: #fff; font-size: 11px; font-weight: 800; cursor: pointer; white-space: nowrap; }
         .companion-use:disabled { background: #e5e7eb; color: #a3a8b0; cursor: not-allowed; }
         .companion-card-preview { height: 82px; display: flex; justify-content: center; align-items: center; border-radius: 8px; background: linear-gradient(135deg,#eef2ff,#fff); margin-bottom: 6px; }
-        .companion-card-preview img { width: 76px; height: 76px; object-fit: contain; image-rendering: pixelated; }
+        .companion-card-preview .companion-avatar { width: 76px; height: 76px; }
         .companion-item-badge { font-size: 10px; color: #666; min-height: 28px; line-height: 1.35; }
         .frame-bronze { border: 3px solid #cd7f32; box-shadow: 0 0 8px rgba(205,127,50,0.4); }
         .frame-silver { border: 3px solid #c0c0c0; box-shadow: 0 0 12px rgba(192,192,192,0.5); }
@@ -732,6 +746,7 @@ class WordMatchGame {
         this.unlockedCompanions = ['dino'];
         this.equippedCompanion = 'dino';
         this.companionInventory = {};
+        this.companionGrowth = {};
         this.mechaShieldMoves = 0;
         this.deferredInstallPrompt = null;
         this.letterColorMap = {};
@@ -801,6 +816,7 @@ class WordMatchGame {
                 this.unlockedCompanions = data.unlockedCompanions || ['dino'];
                 this.equippedCompanion = data.equippedCompanion || 'dino';
                 this.companionInventory = data.companionInventory || {};
+                this.companionGrowth = data.companionGrowth || {};
                 this.mechaShieldMoves = data.mechaShieldMoves || 0;
                 if (data.speakEnabled !== undefined) this.sound.speakEnabled = data.speakEnabled;
                 if (version < 2) {
@@ -839,6 +855,7 @@ class WordMatchGame {
             unlockedCompanions: this.unlockedCompanions,
             equippedCompanion: this.equippedCompanion,
             companionInventory: this.companionInventory,
+            companionGrowth: this.companionGrowth,
             mechaShieldMoves: this.mechaShieldMoves,
             speakEnabled: this.sound.speakEnabled,
             date: Date.now()
@@ -1192,6 +1209,7 @@ class WordMatchGame {
             const equipped = this.equippedCompanion === companion.id;
             const item = COMPANION_ITEMS.find(entry => entry.companion === companion.id);
             const count = this.companionInventory[item.id] || 0;
+            const growth = this.getCompanionGrowth(companion.id);
             const card = document.createElement('div');
             card.className = `shop-card ${owned ? 'owned' : ''} ${equipped ? 'equipped' : ''}`;
             let actions = '';
@@ -1205,9 +1223,11 @@ class WordMatchGame {
             }
             card.innerHTML = `
                 ${equipped ? '<div class="equipped-badge">出战中</div>' : ''}
-                <div class="companion-card-preview"><img src="${companion.image}" alt="${companion.name}"></div>
+                <div class="companion-card-preview">${this.getCompanionAvatarHTML(companion, growth.level)}</div>
                 <div class="shop-name">${companion.name}</div>
                 <div class="companion-item-badge">${companion.effect}</div>
+                <div class="companion-level">${growth.label} · 羁绊 ${growth.points}/${growth.next}</div>
+                <div class="companion-growth"><div class="companion-growth-fill" style="width:${growth.percent}%"></div></div>
                 ${actions}
             `;
             grid.appendChild(card);
@@ -1240,7 +1260,12 @@ class WordMatchGame {
         if (this.score < item.price) return this.showToast('积分不足!');
         this.score -= item.price;
         this.companionInventory[id] = (this.companionInventory[id] || 0) + 1;
+        this.companionGrowth[item.companion] = (this.companionGrowth[item.companion] || 0) + 1;
+        const growth = this.getCompanionGrowth(item.companion);
         this.showToast(`🎒 获得 ${item.name}`);
+        if (growth.points === 3 || growth.points === 8) {
+            this.showToast(`✨ ${growth.name} 进化为「${growth.label}」`);
+        }
         this.renderCompanionDock();
         this.saveGlobal();
         this.renderShop('companion');
@@ -1281,15 +1306,37 @@ class WordMatchGame {
         if (!dock) return;
         const companion = COMPANIONS.find(item => item.id === this.equippedCompanion) || COMPANIONS[0];
         const count = this.companionInventory[companion.item] || 0;
+        const growth = this.getCompanionGrowth(companion.id);
         const shield = this.mechaShieldMoves > 0 ? ` · 护盾剩余 ${this.mechaShieldMoves} 步` : '';
         dock.innerHTML = `
-            <img class="companion-sprite" src="${companion.image}" alt="${companion.name}">
+            ${this.getCompanionAvatarHTML(companion, growth.level)}
             <div class="companion-copy">
                 <div class="companion-name">${companion.name}</div>
                 <div class="companion-effect">${companion.effect}${shield}</div>
+                <div class="companion-level">${growth.label} · 羁绊 ${growth.points}/${growth.next}</div>
+                <div class="companion-growth"><div class="companion-growth-fill" style="width:${growth.percent}%"></div></div>
             </div>
             <button class="companion-use" onclick="game.useCompanionItem()" ${count <= 0 ? 'disabled' : ''}>${companion.itemName} ×${count}</button>
         `;
+    }
+
+    getCompanionGrowth(id) {
+        const points = this.companionGrowth[id] || 0;
+        const level = points >= 8 ? 3 : (points >= 3 ? 2 : 1);
+        const labels = {
+            dino: ['幼年探险家','荒野侦察员','远古守护者'],
+            mecha: ['基础机体','重装先锋','苍蓝统帅'],
+            princess: ['星愿学徒','星辉公主','银河女王']
+        };
+        const next = level === 1 ? 3 : (level === 2 ? 8 : 'MAX');
+        const percent = level === 1 ? points / 3 * 100 : (level === 2 ? (points - 3) / 5 * 100 : 100);
+        return { points, level, next, percent:Math.min(100, Math.round(percent)), label:labels[id][level - 1], name:COMPANIONS.find(item => item.id === id)?.name || '伙伴' };
+    }
+
+    getCompanionAvatarHTML(companion, level) {
+        return `<div class="companion-avatar ${companion.id} level-${level}">
+            <img class="companion-sprite" src="${companion.image}" alt="${companion.name}">
+        </div>`;
     }
 
     getShopPreviewHTML(item) {
