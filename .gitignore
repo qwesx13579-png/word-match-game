@@ -1,3 +1,9 @@
 .claude/
 .envrc
 .DS_Store
+.netlify/
+.venv/
+__pycache__/
+
+# Nested independent repo (has its own git remote) — do not embed
+youdianweixian-game/
